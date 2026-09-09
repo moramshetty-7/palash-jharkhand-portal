@@ -85,10 +85,10 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link to="/institution/login" className="btn btn-outline-white btn-sm">
+              <Link to="/institution/login" className="btn btn-saffron btn-sm">
                 🎓 Institution
               </Link>
-              <Link to="/industry/login" className="btn btn-outline-white btn-sm">
+              <Link to="/industry/login" className="btn btn-saffron btn-sm">
                 🏭 Industry
               </Link>
               <Link to="/government/login" className="btn btn-saffron btn-sm">

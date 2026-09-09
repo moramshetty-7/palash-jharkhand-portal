@@ -104,12 +104,13 @@ a:hover {
 
 /* ---- NAVBAR ---- */
 .navbar {
-  background: linear-gradient(135deg, var(--jh-green-dark) 0%, var(--jh-green) 100%);
+  background-color: transparent;
+  background-image: none;
   color: white;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
 }
 
 .navbar-inner {
@@ -241,6 +242,26 @@ a:hover {
 .btn-outline-white:hover:not(:disabled) {
   background: white;
   color: var(--jh-green);
+}
+
+.btn-institution-nav {
+  border-color: #f3c4a7;
+  color: #a7f3d0;
+}
+
+.btn-institution-nav:hover:not(:disabled) {
+  background: #f3bea7;
+  color: #064e3b;
+}
+
+.btn-industry-nav {
+  border-color: #bfdbfe;
+  color: #bfdbfe;
+}
+
+.btn-industry-nav:hover:not(:disabled) {
+  background: #bfdbfe;
+  color: #1e3a8a;
 }
 
 .btn-ghost {

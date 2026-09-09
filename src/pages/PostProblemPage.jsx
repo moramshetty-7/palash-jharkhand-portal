@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { JHARKHAND_DISTRICTS } from '../lib/constants'
-import { submitProblem } from '../lib/submitProblem'
+import { classifyDomain, submitProblem } from '../lib/submitProblem'
+import { supabase } from '../lib/supabase'
 
 export default function PostProblemPage() {
   const [form, setForm] = useState({
@@ -19,10 +20,115 @@ export default function PostProblemPage() {
   const [result, setResult] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
 
+
+const [language, setLanguage] = useState('en-IN')
+const [isListening, setIsListening] = useState(false)
+const [speechSupported, setSpeechSupported] = useState(true)
+const [speechError, setSpeechError] = useState('')
+const [analysis, setAnalysis] = useState(null)
+const recognitionRef = useRef(null)
+
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
+  const handleAnalyze = () => {
+  const { domain, confidence } = classifyDomain(
+    form.title,
+    form.description
+  )
+
+  setAnalysis({
+    domain,
+    confidence,
+  })
+}
+const translateToEnglish = async (text) => {
+  if (!text.trim() || language === 'en-IN') {
+    return text.trim()
+  }
+
+  const { data, error } = await supabase.functions.invoke(
+    'translate-to-english',
+    {
+      body: {
+        text: text.trim(),
+        language,
+      },
+    }
+  )
+
+  if (error) {
+    throw new Error('Translation failed. Please try again.')
+  }
+
+  if (!data?.translatedText) {
+    throw new Error('Could not translate the speech.')
+  }
+
+  return data.translatedText
+}
+
+  useEffect(() => {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition
+
+  if (!SpeechRecognition) {
+    setSpeechSupported(false)
+    return
+  }
+
+  const recognition = new SpeechRecognition()
+
+  recognition.continuous = true
+  recognition.interimResults = true
+  recognition.lang = language
+
+  recognition.onresult = async (event) => {
+  let transcript = ''
+
+  for (let i = 0; i < event.results.length; i++) {
+    transcript += event.results[i][0].transcript
+  }
+
+  transcript = transcript.trim()
+
+  if (!transcript) return
+
+  try {
+    const englishText = await translateToEnglish(transcript)
+
+    setForm((prev) => ({
+      ...prev,
+      description: englishText,
+    }))
+  } catch (error) {
+    setSpeechError(error.message)
+  }
+}
+
+  recognition.onerror = (event) => {
+    setSpeechError(
+      event.error === 'not-allowed'
+        ? 'Microphone permission was denied.'
+        : `Speech recognition error: ${event.error}`
+    )
+    setIsListening(false)
+  }
+
+  recognition.onend = () => {
+    setIsListening(false)
+  }
+
+  recognitionRef.current = recognition
+
+  return () => {
+    try {
+      recognition.abort()
+    } catch {}
+    recognitionRef.current = null
+  }
+}, [language])
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files)
     setFiles(selected)
@@ -37,7 +143,7 @@ export default function PostProblemPage() {
     setErrorMsg('')
     setStatus('loading')
 
-    const { data, error } = await submitProblem(form)
+    const { data, error } = await submitProblem(form, files)
 
     if (error) {
       setErrorMsg(error.message || 'Submission failed. Please try again.')
@@ -98,6 +204,50 @@ export default function PostProblemPage() {
                 <label className="form-label">
                   Detailed Description <span className="required">*</span>
                 </label>
+                <div style={{
+  display: 'flex',
+  gap: '0.6rem',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  marginBottom: '0.6rem'
+}}>
+  <select
+    className="form-select"
+    value={language}
+    onChange={(e) => setLanguage(e.target.value)}
+    style={{ maxWidth: '220px' }}
+  >
+    <option value="en-IN">🇮🇳 English</option>
+    <option value="hi-IN">🇮🇳 हिंदी</option>
+    <option value="bn-IN">🇮🇳 বাংলা</option>
+  </select>
+
+  {!isListening ? (
+    <button
+      type="button"
+      className="btn btn-primary"
+      onClick={() => {
+        setSpeechError('')
+        recognitionRef.current?.start()
+        setIsListening(true)
+      }}
+      disabled={!speechSupported}
+    >
+      🎙️ Speak Problem
+    </button>
+  ) : (
+    <button
+      type="button"
+      className="btn btn-primary"
+      onClick={() => {
+        recognitionRef.current?.stop()
+        setIsListening(false)
+      }}
+    >
+      ⏹ Stop Listening
+    </button>
+  )}
+</div>
                 <textarea
                   className="form-textarea"
                   name="description"
@@ -110,6 +260,32 @@ export default function PostProblemPage() {
                 <div className="form-hint">
                   More detail helps the AI classify accurately and find the right organizations.
                 </div>
+                <button
+  type="button"
+  className="btn btn-primary"
+  onClick={handleAnalyze}
+  disabled={!form.description.trim()}
+  style={{ marginTop: '0.6rem' }}
+>
+  🤖 Analyze Problem
+</button>
+
+{analysis && (
+  <div
+    className="alert alert-info"
+    style={{ marginTop: '0.6rem' }}
+  >
+    <span className="alert-icon">🤖</span>
+    <div>
+      <strong>PALASH Analysis</strong>
+      <div>
+        Detected Domain: <strong>{analysis.domain}</strong>
+        {' · '}
+        Confidence: <strong>{analysis.confidence}%</strong>
+      </div>
+    </div>
+  </div>
+)}
               </div>
 
               {/* Location */}

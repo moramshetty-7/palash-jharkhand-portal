@@ -58,6 +58,56 @@ function SectionCard({ title, action, children }) {
   )
 }
 
+function SeverityBadge({ severity, reportCount }) {
+  const config = {
+    critical: {
+      label: 'CRITICAL',
+      icon: '🔴',
+      background: '#fee2e2',
+      color: '#991b1b',
+    },
+    high: {
+      label: 'HIGH',
+      icon: '🟠',
+      background: '#ffedd5',
+      color: '#c2410c',
+    },
+    moderate: {
+      label: 'MODERATE',
+      icon: '🟡',
+      background: '#fef3c7',
+      color: '#92400e',
+    },
+    low: {
+      label: 'LOW',
+      icon: '🟢',
+      background: '#dcfce7',
+      color: '#166534',
+    },
+  }
+
+  const current = config[severity] || config.low
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <span
+        className="badge"
+        style={{
+          background: current.background,
+          color: current.color,
+          fontWeight: 800,
+        }}
+      >
+        {current.icon} {current.label}
+      </span>
+
+      <span style={{ fontSize: '0.78rem', color: 'var(--gray-600)' }}>
+        {reportCount || 1} report{(reportCount || 1) !== 1 ? 's' : ''}
+      </span>
+    </div>
+  )
+}
+
 export default function GovernmentDashboardPage() {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
@@ -777,6 +827,10 @@ export default function GovernmentDashboardPage() {
                               <span className="badge" style={{ background: '#ecfdf5', color: '#047857' }}>
                                 {prob.domain}
                               </span>
+                              <SeverityBadge
+  severity={prob.severity}
+  reportCount={prob.report_count}
+/>
                               <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>
                                 📍 {prob.district || 'Jharkhand'}
                               </span>

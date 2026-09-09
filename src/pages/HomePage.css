@@ -17,8 +17,8 @@
 /* ---- PALASH HERO ---- */
 .palash-hero {
   position: relative;
-  background: radial-gradient(circle at 50% 20%, rgba(234, 88, 12, 0.12) 0%, transparent 65%),
-              linear-gradient(180deg, #0f172a 0%, #172033 60%, #1e293b 100%);
+  background: linear-gradient(rgba(15, 23, 42, 0.28), rgba(15, 23, 42, 0.28)),
+              url('/assets/palash-hero-bg.png') center / cover no-repeat;
   color: #ffffff;
   padding: 4.5rem 1.5rem 4rem;
   overflow: hidden;
@@ -126,9 +126,7 @@
 }
 
 .palash-hero-title span.palash-gradient-text {
-  background: linear-gradient(135deg, #fb923c 0%, #f97316 45%, #ef4444 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #ffffff;
 }
 
 .palash-hero-tagline {

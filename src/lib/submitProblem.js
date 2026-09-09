@@ -152,7 +152,7 @@ async function generateProblemId(domain) {
  * @param {object} form  - { title, description, district, location_text, poster_name, poster_contact }
  * @returns {Promise<{ data, error }>}
  */
-export async function submitProblem(form) {
+export async function submitProblem(form, files = []) {
   // 1. Classify domain
   const { domain, confidence } = classifyDomain(form.title, form.description)
 
@@ -183,10 +183,59 @@ export async function submitProblem(form) {
   if (error) {
     return { data: null, error }
   }
+  // 5. Upload attached media to Supabase Storage
+if (files.length > 0) {
+  for (const file of files) {
+    const extension = file.name.split('.').pop()?.toLowerCase() || 'bin'
+    const storagePath = `problems/${Date.now()}-${crypto.randomUUID()}.${extension}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('problem-images')
+      .upload(storagePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type || 'application/octet-stream',
+      })
+
+    if (uploadError) {
+      return {
+        data: null,
+        error: new Error(`Image upload failed: ${uploadError.message}`),
+      }
+    }
+
+    let fileType = 'document'
+
+    if (file.type.startsWith('image/')) {
+      fileType = 'image'
+    } else if (file.type.startsWith('video/')) {
+      fileType = 'video'
+    }
+
+    const { error: mediaError } = await supabase
+      .from('problem_media')
+      .insert({
+        problem_id: data.id,
+        file_name: file.name,
+        file_type: fileType,
+        storage_path: storagePath,
+        size_bytes: file.size,
+      })
+
+    if (mediaError) {
+      return {
+        data: null,
+        error: new Error(`Media record failed: ${mediaError.message}`),
+      }
+    }
+  }
+}
 
   // 5. Asynchronously match organizations and insert persistent notifications
   try {
-    await matchAndNotifyOrganizations(data)
+     await updateProblemSeverity(data)
+
+  await matchAndNotifyOrganizations(data)
   } catch (matchErr) {
     console.warn('Matching notice:', matchErr)
   }
@@ -200,4 +249,52 @@ export async function submitProblem(form) {
     },
     error: null,
   }
+}
+// Find a similar problem in the same district and increase its severity
+async function updateProblemSeverity(problem) {
+  if (!problem.district || !problem.domain) return
+
+  const { data: existingProblems, error } = await supabase
+    .from('problems')
+    .select('id, title, description, report_count')
+    .eq('district', problem.district)
+    .eq('domain', problem.domain)
+    .neq('id', problem.id)
+
+  if (error || !existingProblems?.length) return
+
+  const newText = `${problem.title} ${problem.description}`.toLowerCase()
+
+  const matched = existingProblems.find((existing) => {
+    const words = existing.title
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((word) => word.length > 4)
+
+    const matches = words.filter((word) => newText.includes(word))
+
+    return matches.length >= 1
+  })
+
+  if (!matched) return
+
+  const newCount = (matched.report_count || 1) + 1
+
+  let severity = 'low'
+
+  if (newCount >= 11) {
+    severity = 'critical'
+  } else if (newCount >= 6) {
+    severity = 'high'
+  } else if (newCount >= 3) {
+    severity = 'moderate'
+  }
+
+  await supabase
+    .from('problems')
+    .update({
+      report_count: newCount,
+      severity,
+    })
+    .eq('id', matched.id)
 }

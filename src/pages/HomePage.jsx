@@ -95,21 +95,6 @@ export default function HomePage() {
         <div className="palash-hero-pattern" />
 
         <div className="palash-hero-content">
-          {/* SIH 2026 Badge */}
-          <div className="palash-badge">
-            <span className="palash-badge-pulse" />
-            <span>Smart India Hackathon 2026 · Problem Statement #43 · Jharkhand</span>
-          </div>
-
-          {/* Exact PALASH Logo Display */}
-          <div className="palash-logo-container">
-            <img
-              src="/assets/palash-logo-exact.png"
-              alt="PALASH - From Challenges to Change"
-              className="palash-exact-logo"
-            />
-          </div>
-
           {/* Heading */}
           <h1 className="palash-hero-title">
             From <span className="palash-gradient-text">Challenges</span> to <span className="palash-gradient-text">Change</span>
